@@ -31,12 +31,12 @@ model Customer {
 }
 
 model Reservation {
-  id        String  @id @default(uuid())
-  checkIn   DateTime
-  checkOut  DateTime
-  room      Room   @relation(fields: [roomId], references: [id])
-  roomId    String
-  customer  Customer @relation(fields: [customerId], references: [id])
-  customerId String
-  guests    Int     @default(1) 
+  id          String   @id @default(uuid())
+  checkIn     DateTime
+  checkOut    DateTime
+  room        Room     @relation(fields: [roomId], references: [id])
+  roomId      String
+  customer    Customer @relation(fields: [customerId], references: [id]) // Cliente que paga
+  customerId  String
+  guests      String[] @default([]) 
 }

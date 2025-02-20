@@ -7,7 +7,7 @@ const prisma = new PrismaClient();
 export async function GET() {
   try {
     const reservations = await prisma.reservation.findMany({
-      include: { room: true, customer: true },
+      include: { room: true, customer: true }, // Inclui detalhes do quarto e do cliente
     });
     return NextResponse.json(reservations, { status: 200 });
   } catch (error) {
@@ -25,17 +25,16 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Todos os campos são obrigatórios" }, { status: 400 });
     }
 
-    // Verificando se o quarto e o cliente existem
+    if (guests.length > 3) {
+      return NextResponse.json({ error: "O limite é de 3 hóspedes por quarto." }, { status: 400 });
+    }
+
+    // Verificar se o quarto e o cliente existem
     const roomExists = await prisma.room.findUnique({ where: { id: String(roomId) } });
     const customerExists = await prisma.customer.findUnique({ where: { id: String(customerId) } });
 
-    if (!roomExists) {
-      return NextResponse.json({ error: "Quarto não encontrado" }, { status: 404 });
-    }
-
-    if (!customerExists) {
-      return NextResponse.json({ error: "Cliente não encontrado" }, { status: 404 });
-    }
+    if (!roomExists) return NextResponse.json({ error: "Quarto não encontrado" }, { status: 404 });
+    if (!customerExists) return NextResponse.json({ error: "Cliente pagante não encontrado" }, { status: 404 });
 
     // Criando a reserva
     const newReservation = await prisma.reservation.create({
@@ -44,7 +43,7 @@ export async function POST(req: Request) {
         checkOut: new Date(checkOut),
         roomId: String(roomId),
         customerId: String(customerId),
-        guests: Number(guests),
+        guests,
       },
     });
 

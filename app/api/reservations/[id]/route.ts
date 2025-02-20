@@ -13,7 +13,10 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
       return NextResponse.json({ error: "Todos os campos são obrigatórios" }, { status: 400 });
     }
 
-    // Verificando se a reserva existe
+    if (guests.length > 3) {
+      return NextResponse.json({ error: "O limite é de 3 hóspedes por quarto." }, { status: 400 });
+    }
+
     const existingReservation = await prisma.reservation.findUnique({
       where: { id: String(id) },
     });
@@ -22,7 +25,7 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
       return NextResponse.json({ error: "Reserva não encontrada" }, { status: 404 });
     }
 
-    // Atualizando a reserva
+    // 🔹 Atualizar reserva
     const updatedReservation = await prisma.reservation.update({
       where: { id: String(id) },
       data: {
@@ -30,7 +33,7 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
         checkOut: new Date(checkOut),
         roomId: String(roomId),
         customerId: String(customerId),
-        guests: Number(guests),
+        guests,
       },
     });
 
@@ -50,7 +53,6 @@ export async function DELETE(req: Request, { params }: { params: { id: string } 
       return NextResponse.json({ error: "ID da reserva é obrigatório" }, { status: 400 });
     }
 
-    // Verificando se a reserva existe antes de deletar
     const existingReservation = await prisma.reservation.findUnique({
       where: { id: String(id) },
     });

@@ -3,9 +3,51 @@ import { NextResponse } from "next/server";
 
 const prisma = new PrismaClient();
 
-export async function GET() {
-  const rooms = await prisma.room.findMany();
-  return NextResponse.json(rooms, { status: 200 });
+export async function GET(req: NextRequest) {
+  try {
+    const url = new URL(req.url);
+    const type = url.searchParams.get("type");
+    const status = url.searchParams.get("status");
+
+    let query: any = {};
+
+    // 🔹 Filtro por tipo de quarto
+    if (type && type !== "Todos") {
+      query.type = type;
+    }
+
+    // 🔹 Buscar quartos e incluir reservas ativas
+    const rooms = await prisma.room.findMany({
+      include: {
+        reservations: {
+          where: {
+            checkOut: { gte: new Date() },
+          },
+        },
+      },
+      where: query,
+    });
+
+    // 🔹 Define `isOccupied` com base nas reservas ativas
+    const updatedRooms = rooms.map((room) => ({
+      ...room,
+      isOccupied: room.reservations.length > 0,
+    }));
+
+    // 🔹 Aplicar filtro por status (disponível/ocupado)
+    let filteredRooms = updatedRooms;
+    if (status === "available") {
+      filteredRooms = updatedRooms.filter(room => !room.isOccupied);
+    } else if (status === "occupied") {
+      filteredRooms = updatedRooms.filter(room => room.isOccupied);
+    }
+
+    return NextResponse.json(filteredRooms, { status: 200 });
+
+  } catch (error) {
+    console.error("Erro ao buscar quartos:", error);
+    return NextResponse.json({ error: "Erro ao carregar quartos" }, { status: 500 });
+  }
 }
 
 export async function POST(req: Request) {

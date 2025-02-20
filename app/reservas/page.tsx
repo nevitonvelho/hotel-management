@@ -7,31 +7,63 @@ export default function ReservasPage() {
   const [rooms, setRooms] = useState([]);
   const [customers, setCustomers] = useState([]);
   const [selectedReserva, setSelectedReserva] = useState(null);
-  const [formData, setFormData] = useState({ checkIn: '', checkOut: '', roomId: '', customerId: '', guests: '1' });
+  const [loading, setLoading] = useState(true);
+  const [formData, setFormData] = useState({
+    checkIn: '',
+    checkOut: '',
+    roomId: '',
+    customerId: '',
+    guests: []
+  });
 
   useEffect(() => {
-    fetch("/api/reservations")
-      .then((res) => res.json())
-      .then((data) => setReservas(data));
+    async function fetchData() {
+      try {
+        const reservationsRes = await fetch("/api/reservations");
+        const roomsRes = await fetch("/api/rooms");
+        const customersRes = await fetch("/api/clientes");
 
-    fetch("/api/rooms")
-      .then((res) => res.json())
-      .then((data) => setRooms(data));
+        const reservationsData = await reservationsRes.json();
+        const roomsData = await roomsRes.json();
+        const customersData = await customersRes.json();
 
-    fetch("/api/clientes")
-      .then((res) => res.json())
-      .then((data) => setCustomers(data));
+        setReservas(reservationsData);
+        setRooms(roomsData);
+        setCustomers(customersData);
+        setLoading(false);
+      } catch (error) {
+        console.error("Erro ao carregar os dados:", error);
+      }
+    }
+
+    fetchData();
   }, []);
 
   const handleEdit = (reserva) => {
     setSelectedReserva(reserva.id);
     setFormData({ 
-      checkIn: reserva.checkIn.split("T")[0], 
-      checkOut: reserva.checkOut.split("T")[0], 
-      roomId: reserva.room.id, 
-      customerId: reserva.customer.id, 
-      guests: reserva.guests 
+      checkIn: reserva.checkIn?.split("T")[0] || '', 
+      checkOut: reserva.checkOut?.split("T")[0] || '', 
+      roomId: reserva.room?.id || '', 
+      customerId: reserva.customer?.id || '', 
+      guests: reserva.guests || []
     });
+  };
+
+  const handleGuestSelection = (customerId) => {
+    let updatedGuests = [...formData.guests];
+
+    if (updatedGuests.includes(customerId)) {
+      updatedGuests = updatedGuests.filter(id => id !== customerId);
+    } else {
+      if (updatedGuests.length < 3) {
+        updatedGuests.push(customerId);
+      } else {
+        alert("Máximo de 3 hóspedes por quarto.");
+      }
+    }
+
+    setFormData({ ...formData, guests: updatedGuests });
   };
 
   const handleUpdate = async (e) => {
@@ -52,6 +84,10 @@ export default function ReservasPage() {
     window.location.reload();
   };
 
+  if (loading) {
+    return <div className="text-center text-gray-600">Carregando...</div>;
+  }
+
   return (
     <div className="container mx-auto p-4">
       <div className="flex items-center justify-between mb-5">
@@ -67,8 +103,14 @@ export default function ReservasPage() {
           {reservas.map((reserva) => (
             <li key={reserva.id} className="flex justify-between items-center border-b p-2">
               <span>
-                Check-in: {reserva.checkIn.split("T")[0]} | Check-out: {reserva.checkOut.split("T")[0]} | 
-                Cliente: {reserva.customer?.name} | Quarto: #{reserva.room?.number} | Hóspedes: {reserva.guests}
+                <strong>Check-in:</strong> {reserva.checkIn?.split("T")[0]} | 
+                <strong> Check-out:</strong> {reserva.checkOut?.split("T")[0]} | 
+                <strong> Cliente:</strong> {reserva.customer?.name || "Não informado"} | 
+                <strong> Quarto:</strong> #{reserva.room?.number || "Não informado"} | 
+                <strong> Hóspedes:</strong> {reserva.guests.map((guestId) => {
+                  const guest = customers.find(c => c.id === guestId);
+                  return guest ? guest.name : "Desconhecido";
+                }).join(", ")}
               </span>
               <div className="flex items-center gap-4">
                 <button className="btn btn-warning" onClick={() => handleEdit(reserva)}>Editar</button>
@@ -132,16 +174,20 @@ export default function ReservasPage() {
               ))}
             </select>
 
-            <label className="text-gray-600">Número de Hóspedes:</label>
-            <input
-              type="number"
-              min="1"
-              max="3"
-              value={formData.guests}
-              onChange={(e) => setFormData({ ...formData, guests: e.target.value })}
-              className="input input-bordered w-full"
-              required
-            />
+            <label className="text-gray-600">Hóspedes (Máx: 3):</label>
+            <div className="flex flex-wrap gap-2">
+              {customers.map((customer) => (
+                <label key={customer.id} className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={formData.guests.includes(customer.id)}
+                    onChange={() => handleGuestSelection(customer.id)}
+                    className="checkbox checkbox-primary"
+                  />
+                  {customer.name}
+                </label>
+              ))}
+            </div>
 
             <button type="submit" className="btn btn-active btn-primary">
               Atualizar
