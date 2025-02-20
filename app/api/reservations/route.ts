@@ -3,11 +3,10 @@ import { NextResponse } from "next/server";
 
 const prisma = new PrismaClient();
 
-// 🔹 Obter todas as reservas
 export async function GET() {
   try {
     const reservations = await prisma.reservation.findMany({
-      include: { room: true, customer: true }, // Inclui detalhes do quarto e do cliente
+      include: { room: true, customer: true }, 
     });
     return NextResponse.json(reservations, { status: 200 });
   } catch (error) {
@@ -16,7 +15,6 @@ export async function GET() {
   }
 }
 
-// 🔹 Criar uma nova reserva
 export async function POST(req: Request) {
   try {
     const { checkIn, checkOut, roomId, customerId, guests } = await req.json();
@@ -29,14 +27,12 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "O limite é de 3 hóspedes por quarto." }, { status: 400 });
     }
 
-    // Verificar se o quarto e o cliente existem
     const roomExists = await prisma.room.findUnique({ where: { id: String(roomId) } });
     const customerExists = await prisma.customer.findUnique({ where: { id: String(customerId) } });
 
     if (!roomExists) return NextResponse.json({ error: "Quarto não encontrado" }, { status: 404 });
     if (!customerExists) return NextResponse.json({ error: "Cliente pagante não encontrado" }, { status: 404 });
 
-    // Criando a reserva
     const newReservation = await prisma.reservation.create({
       data: {
         checkIn: new Date(checkIn),

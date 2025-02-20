@@ -3,9 +3,26 @@ import { NextResponse } from "next/server";
 
 const prisma = new PrismaClient();
 
-export async function GET() {
-  const customers = await prisma.customer.findMany();
-  return NextResponse.json(customers, { status: 200 });
+export async function GET(req: Request) {
+  const url = new URL(req.url);
+  const search = url.searchParams.get("search") || "";
+
+  try {
+    const customers = await prisma.customer.findMany({
+      where: {
+        OR: [
+          { name: { contains: search, mode: "insensitive" } },
+          { email: { contains: search, mode: "insensitive" } },
+          { phone: { contains: search, mode: "insensitive" } },
+        ],
+      },
+    });
+
+    return NextResponse.json(customers, { status: 200 });
+  } catch (error) {
+    console.error("Erro ao buscar clientes:", error);
+    return NextResponse.json({ error: "Erro ao carregar clientes" }, { status: 500 });
+  }
 }
 
 export async function POST(req: Request) {

@@ -36,7 +36,7 @@ model Reservation {
   checkOut    DateTime
   room        Room     @relation(fields: [roomId], references: [id])
   roomId      String
-  customer    Customer @relation(fields: [customerId], references: [id]) // Cliente que paga
+  customer    Customer @relation(fields: [customerId], references: [id]) 
   customerId  String
   guests      String[] @default([]) 
 }

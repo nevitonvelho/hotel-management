@@ -11,12 +11,10 @@ export async function GET(req: NextRequest) {
 
     let query: any = {};
 
-    // 🔹 Filtro por tipo de quarto
     if (type && type !== "Todos") {
       query.type = type;
     }
 
-    // 🔹 Buscar quartos e incluir reservas ativas
     const rooms = await prisma.room.findMany({
       include: {
         reservations: {
@@ -28,13 +26,11 @@ export async function GET(req: NextRequest) {
       where: query,
     });
 
-    // 🔹 Define `isOccupied` com base nas reservas ativas
     const updatedRooms = rooms.map((room) => ({
       ...room,
       isOccupied: room.reservations.length > 0,
     }));
 
-    // 🔹 Aplicar filtro por status (disponível/ocupado)
     let filteredRooms = updatedRooms;
     if (status === "available") {
       filteredRooms = updatedRooms.filter(room => !room.isOccupied);
